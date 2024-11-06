@@ -1,74 +1,68 @@
-from collections import deque
+#A* Algorithm Code
 
-class Graph:
-    def __init__(self, adjacency_list):
-        self.adjacency_list = adjacency_list
+# The goal state of the puzzle
+goal_state = [[1, 2, 3],
+              [4, 5, 6],
+              [7, 8, 0]]  # '0' represents the empty space
 
-    def get_neighbors(self, v):
-        return self.adjacency_list[v]
+# Define the directions we can move: left, right, up, down
+directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
 
-    def h(self, n):
-        H = {
-            'A': 1,
-            'B': 1,
-            'C': 1,
-            'D': 1
-        }
-        return H[n]
+def manhattan_distance(state, goal):
+    distance = 0
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] != 0:
+                goal_i, goal_j = divmod(state[i][j] - 1, 3)
+                distance += abs(i - goal_i) + abs(j - goal_j)
+    return distance
 
-    def a_star_algorithm(self, start_node, stop_node):
-        open_list = set([start_node])
-        closed_list = set([])
-        g = {}
-        g[start_node] = 0
-        parents = {}
-        parents[start_node] = start_node
+def a_star(start_state):
+    # List to store (state, cost, heuristic, path)
+    open_list = [(start_state, 0, manhattan_distance(start_state, goal_state), [])]  # (state, g, h, path)
 
-        while len(open_list) > 0:
-            n = None
+    visited = set()
 
-            for v in open_list:
-                if n is None or (g[v] + self.h(v) < g[n] + self.h(n)):
-                    n = v
+    while open_list:
+        # Sort open list based on f = g + h and get the first element
+        open_list.sort(key=lambda x: x[1] + x[2])
+        current_state, g, h, path = open_list.pop(0)
+        visited.add(tuple(map(tuple, current_state)))
 
-            if n is None:
-                print('Path does not exist!')
-                return None
+        # If the goal state is reached
+        if current_state == goal_state:
+            return path + [current_state]
 
-            if n == stop_node:
-                reconst_path = []
-                while parents[n] != n:
-                    reconst_path.append(n)
-                    n = parents[n]
-                reconst_path.append(start_node)
-                reconst_path.reverse()
-                print('Path found: {}'.format(reconst_path))
-                return reconst_path
+        # Get the empty tile position (0)
+        i, j = [(i, j) for i in range(3) for j in range(3) if current_state[i][j] == 0][0]
 
-            for (m, weight) in self.get_neighbors(n):
-                if m not in open_list and m not in closed_list:
-                    open_list.add(m)
-                    parents[m] = n
-                    g[m] = g[n] + weight
-                else:
-                    if g[m] > g[n] + weight:
-                        g[m] = g[n] + weight
-                        parents[m] = n
-                        if m in closed_list:
-                            closed_list.remove(m)
-                            open_list.add(m)
-            open_list.remove(n)
-            closed_list.add(n)
+        # Move the empty tile in all four directions
+        for di, dj in directions:
+            ni, nj = i + di, j + dj
+            if 0 <= ni < 3 and 0 <= nj < 3:
+                new_state = [row[:] for row in current_state]  # Copy the state
+                new_state[i][j], new_state[ni][nj] = new_state[ni][nj], new_state[i][j]
 
-        print('Path does not exist!')
-        return None
+                # If the new state hasn't been visited yet
+                if tuple(map(tuple, new_state)) not in visited:
+                    new_g = g + 1
+                    new_h = manhattan_distance(new_state, goal_state)
+                    open_list.append((new_state, new_g, new_h, path + [current_state]))
 
-adjacency_list = {
-    'A': [('B', 1), ('C', 3), ('D', 7)],
-    'B': [('D', 5)],
-    'C': [('D', 12)]
-}
+    return None  # No solution found
 
-graph1 = Graph(adjacency_list)
-graph1.a_star_algorithm('A', 'D')
-#o(b^d)
+# Example usage
+initial_state = [[1, 0, 3],
+                 [4, 2, 5],
+                 [7, 8, 6]]  # Initial configuration of the puzzle
+
+solution = a_star(initial_state)
+
+# Print the solution path
+if solution:
+    for step in solution:
+        for row in step:
+            print(row)
+        print("----")
+else:
+    print("No solution found.")
